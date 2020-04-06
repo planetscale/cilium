@@ -21,6 +21,7 @@ import (
 
 	"github.com/cilium/cilium/api/v1/models"
 	"github.com/cilium/cilium/pkg/datapath/linux/route"
+	"github.com/cilium/cilium/pkg/ip"
 
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/vishvananda/netlink"
@@ -60,12 +61,17 @@ func prepareENI(mac string, mtu int) (index int, err error) {
 }
 
 func eniAdd(ipConfig *current.IPConfig, ipam *models.IPAMAddressResponse, conf models.DaemonConfigurationStatus) error {
-	for _, cidrString := range ipam.Cidrs {
-		_, _, err := net.ParseCIDR(cidrString)
+	allCIDRs := make([]*net.IPNet, len(ipam.Cidrs))
+	for i, cidrString := range ipam.Cidrs {
+		_, ipv4cidr, err := net.ParseCIDR(cidrString)
 		if err != nil {
 			return fmt.Errorf("invalid CIDR '%s': %s", cidrString, err)
+		} else {
+			allCIDRs[i] = ipv4cidr
 		}
 	}
+	// Coalesce CIDRs into minimum set needed for route rules
+	cidrs, _ := ip.CoalesceCIDRs(allCIDRs)
 
 	if ipam.MasterMac == "" {
 		return fmt.Errorf("ENI master interface MAC address is not set")
@@ -91,10 +97,7 @@ func eniAdd(ipConfig *current.IPConfig, ipam *models.IPAMAddressResponse, conf m
 	}
 
 	if conf.Masquerade {
-		for _, cidrString := range ipam.Cidrs {
-			// The cidr string is already verified, this can't fail
-			_, cidr, _ := net.ParseCIDR(cidrString)
-
+		for _, cidr := range cidrs {
 			// Lookup a VPC specific table for all traffic from an endpoint
 			// to the list of CIDRs configured for the VPC on which the
 			// endpoint has the IP on
