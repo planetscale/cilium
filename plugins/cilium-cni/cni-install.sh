@@ -26,6 +26,9 @@ case "$CILIUM_CNI_CHAINING_MODE" in
 "aws-cni")
 	CNI_CONF_NAME=${CNI_CONF_NAME:-05-cilium.conflist}
 	;;
+"azure")
+	CNI_CONF_NAME=${CNI_CONF_NAME:-05-cilium.conflist}
+	;;
 *)
 	CNI_CONF_NAME=${CNI_CONF_NAME:-05-cilium.conf}
 	;;
@@ -146,6 +149,35 @@ EOF
     {
        "name": "cilium",
        "type": "cilium-cni",
+       "enable-debug": ${ENABLE_DEBUG}
+    }
+  ]
+}
+EOF
+	;;
+
+"azure")
+	cat > ${CNI_CONF_NAME} <<EOF
+{
+  "cniVersion": "0.3.0",
+  "name": "azure",
+  "plugins": [
+    {
+      "type": "azure-vnet",
+      "mode": "transparent",
+      "bridge": "azure0",
+      "ipam": {
+         "type": "azure-vnet-ipam"
+       }
+    },
+    {
+      "type": "portmap",
+      "capabilities": {"portMappings": true},
+      "snat": true
+    },
+    {
+       "name": "cilium",
+       "type": "cilium-cni"
        "enable-debug": ${ENABLE_DEBUG}
     }
   ]
