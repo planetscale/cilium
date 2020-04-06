@@ -20,17 +20,24 @@ import (
 
 	"github.com/cilium/cilium/api/v1/models"
 	linuxrouting "github.com/cilium/cilium/pkg/datapath/linux/routing"
+	"github.com/cilium/cilium/pkg/ip"
 
 	"github.com/containernetworking/cni/pkg/types/current"
 )
 
 func eniAdd(ipConfig *current.IPConfig, ipam *models.IPAMAddressResponse, conf models.DaemonConfigurationStatus) error {
-	cidrs := make([]string, 0, len(ipam.Cidrs))
-	for _, cidrString := range ipam.Cidrs {
-		_, cidr, err := net.ParseCIDR(cidrString)
+	allCIDRs := make([]*net.IPNet, len(ipam.Cidrs))
+	for i, cidrString := range ipam.Cidrs {
+		_, ipv4cidr, err := net.ParseCIDR(cidrString)
 		if err != nil {
 			return fmt.Errorf("invalid CIDR '%s': %s", cidrString, err)
 		}
+		allCIDRs[i] = ipv4cidr
+	}
+	// Coalesce CIDRs into minimum set needed for route rules
+	ipv4CIDRs, _ := ip.CoalesceCIDRs(allCIDRs)
+	cidrs := make([]string, 0, len(ipv4CIDRs))
+	for _, cidr := range ipv4CIDRs {
 		cidrs = append(cidrs, cidr.String())
 	}
 
