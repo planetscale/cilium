@@ -159,7 +159,7 @@ EOF
 "azure")
 	cat > ${CNI_CONF_NAME} <<EOF
 {
-  "cniVersion": "0.3.0",
+  "cniVersion": "0.3.1",
   "name": "azure",
   "plugins": [
     {
@@ -177,7 +177,7 @@ EOF
     },
     {
        "name": "cilium",
-       "type": "cilium-cni"
+       "type": "cilium-cni",
        "enable-debug": ${ENABLE_DEBUG}
     }
   ]
