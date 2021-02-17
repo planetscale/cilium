@@ -54,6 +54,9 @@ FROM quay.io/cilium/cilium-runtime:2020-11-13-v1.8@sha256:bd66c2670dd27fe0d1ff8c
 ARG CILIUM_SHA=""
 LABEL cilium-sha=${CILIUM_SHA}
 LABEL maintainer="maintainer@cilium.io"
+
+RUN apt-get update && apt-get upgrade -y
+
 COPY --from=builder /tmp/install /
 COPY --from=cilium-envoy / /
 COPY --from=hubble /usr/bin/hubble /usr/bin/hubble
